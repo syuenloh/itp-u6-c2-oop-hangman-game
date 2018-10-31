@@ -37,10 +37,8 @@ class GuessWord(object):
 
     def perform_attempt(self,char):
         if len(char)==1:
-            if char.islower():
-                word=self.answer.lower()
-            elif char.isupper():
-                word=self.answer.upper()
+            word=self.answer.lower()
+            char=char.lower()
             lst=list(word)
             if char in lst:
                 for x,y in enumerate(lst):
@@ -64,39 +62,60 @@ class HangmanGame(object):
         self.word_list=word_list
         self.number_of_guesses=number_of_guesses
         self.previous_guesses=[]
-        self.remaining_misses=self.number_of_guesses
+        self.remaining_misses=number_of_guesses
         self.word=GuessWord(self.select_random_word(word_list))
-        
-    def select_random_word(self,list_of_words):
+        self.isfinished=self.is_finished()
+        self.iswon=self.is_won()
+        self.islost=self.is_lost()
+
+    @classmethod    
+    def select_random_word(cls,list_of_words):
         if not list_of_words:
             raise InvalidListOfWordsException
         else:
-            self.word_list=list_of_words
-            self.word= random.choice(self.word_list)
-            return self.word
+            word_list=list_of_words
+            word= random.choice(word_list)
+            return word
         
     def guess(self,char):
+        char=char.lower()
         self.previous_guesses.append(char)
-        if GuessAttempt(char).is_miss==True:
-            self.remaining_misses=self.number_of_guesses-1
+        self.number_of_guesses-=1    
+        if self.isfinished==True:
+            raise GameFinishedException
         else:
-            self.remaining_misses=self.remaining_misses
-        if '*' in self.word.masked:
+            if self.word.perform_attempt(char).is_hit()==True:
+                self.remaining_misses=self.remaining_misses
+                if '*' not in self.word.masked:
+                    self.isfinished=True
+                    self.iswon=True
+                    raise GameWonException
+            else:
+                self.remaining_misses-=1
+                if self.remaining_misses==0:
+                    self.isfinished=True
+                    self.islost=True
+                    raise GameLostException
             return self.word.perform_attempt(char)
-        else:
-            raise GameWonException
-                
+        
+        
     def is_finished(self):
-        return True
+        if self.is_won()==True or self.is_lost()==True or self.number_of_guesses==0:
+            self.isfinished=True
+            return True
+        else:
+            return False
     
     def is_won(self):
         if '*' not in self.word.masked:
+            self.iswon=True
             return True
         else:
             return False
     
     def is_lost(self):
-        if '*' in self.word.masked:
+        if self.remaining_misses==0:
+            self.islost=True
             return True
         else:
             return False
